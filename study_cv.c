@@ -1,6 +1,66 @@
 ﻿#include "study_cv.h"
 #include <stdlib.h>
 
+ZqImage *study_add_salt_pepper_noise(ZqImage* bmpImg)
+{
+    //生成椒盐噪声
+    ZqImage* bmpImgSalt;
+    int width = 0;
+    int height = 0;
+    int step = 0;
+    int salt_step = 0;
+    int channels = 1;
+    int i, j, k;
+    width = bmpImg->width;
+    height = bmpImg->height;
+    channels = bmpImg->channels;
+
+    //初始化处理后图片的信息
+    bmpImgSalt = (ZqImage*)malloc(sizeof(ZqImage));
+    bmpImgSalt->channels = channels;
+    bmpImgSalt->width = width;
+    bmpImgSalt->height = height;
+
+    step = channels * width;
+    salt_step = bmpImgSalt->channels * bmpImgSalt->width;
+    bmpImgSalt->imageData =
+        (unsigned char*)malloc(sizeof(unsigned char)*bmpImgSalt->width*bmpImgSalt->height*bmpImgSalt->channels);
+
+    //初始化图像
+    for (i=0; i<bmpImgSalt->height; i++)
+    {
+        for (j=0; j<bmpImgSalt->width; j++)
+        {
+            bmpImgSalt->imageData[(bmpImgSalt->height-1-i)*salt_step+j] = 0;
+        }
+    }
+    //滤波处理
+    srand(time(NULL));
+    int noise_p;
+    for(i = 0;i < bmpImgSalt->height;i++)
+    {
+        for(j = 0;j < bmpImgSalt->width;j++)
+        {
+            for(k=0; k<channels; k++)
+            {
+                noise_p = rand() % 10;
+                if (noise_p == 0)
+                {
+                    int temp = rand() % 2;
+                    if (temp)
+                        bmpImgSalt->imageData[i * salt_step + j*channels +k] = 0x00;
+                    else
+                        bmpImgSalt->imageData[i * salt_step + j*channels +k] = 0xff;
+                }
+                else
+                    bmpImgSalt->imageData[i * salt_step + j*channels +k] = bmpImg->imageData[i * step + j*channels + k];
+            }
+        }
+    }
+
+    return bmpImgSalt;
+}
+
 double study_gaussrand()
 {
     static double V1, V2, S;
