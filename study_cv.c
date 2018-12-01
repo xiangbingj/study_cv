@@ -297,6 +297,7 @@ ZqImage* study_filtering(ZqImage* bmpImg)
 
     //滤波处理
     unsigned char value[9];
+    short color = 0;
     for(i = 0;i < bmpImgFilter->height;i++)
     {
         for(j = 0;j < bmpImgFilter->width;j++)
@@ -327,6 +328,26 @@ ZqImage* study_filtering(ZqImage* bmpImg)
                 (short)abs(value[0] * soble2[0][0] + value[1] * soble2[0][1] + value[2] * soble2[0][2] +
                          value[3] * soble2[1][0] + value[4] * soble2[1][1] + value[5] * soble2[1][2] +
                          value[6] * soble2[2][0] + value[7] * soble2[2][1] + value[8] * soble2[2][2]);
+            /* Arithmetic Mean Filter */
+            int m = 0;
+            for (m = 0; m < 9; m++)
+                color += value[m];
+            color /= 9;
+            bmpImgFilter->imageData[i * filter_step + j*channels +k] = color;
+            /* Contra-Harmonic Mean Filter */
+            int Q = 2;
+            double num = 0.0, den = 0.0;
+            for (m = 0; m < 9; m++){
+                num += pow(value[m], Q+1);
+                den += pow(value[m], Q);
+            }
+            color = (short)(num / den);
+            if (color < 0x00)
+                bmpImgFilter->imageData[i * filter_step + j*channels +k] = 0x00;
+            else if (color > 0xff)
+                bmpImgFilter->imageData[i * filter_step + j*channels +k] = 0xff;
+            else
+                bmpImgFilter->imageData[i * filter_step + j*channels +k] = color;
             }
         }
     }
