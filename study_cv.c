@@ -1,6 +1,159 @@
 ﻿#include "study_cv.h"
 #include <stdlib.h>
 
+double study_gaussrand()
+{
+    static double V1, V2, S;
+    static int phase = 0;
+    double X;
+
+    if(phase == 0) {
+        do
+        {
+            double U1 = (double)rand() / RAND_MAX;
+            double U2 = (double)rand() / RAND_MAX;
+
+            V1 = 2 * U1 - 1;
+            V2 = 2 * U2 - 1;
+            S = V1 * V1 + V2 * V2;
+        } while(S >= 1 || S == 0);
+
+        X = V1 * sqrt(-2 * log(S) / S);
+    }
+    else
+        X = V2 * sqrt(-2 * log(S) / S);
+
+    phase = 1 - phase;
+
+    return X * 50;
+}
+
+ZqImage *study_add_gaussian_noise(ZqImage* bmpImg)
+{
+    //生成高斯噪声
+    ZqImage* bmpImgGaussian;
+    int width = 0;
+    int height = 0;
+    int step = 0;
+    int gaussian_step = 0;
+    int channels = 1;
+    int i, j, k;
+    width = bmpImg->width;
+    height = bmpImg->height;
+    channels = bmpImg->channels;
+
+    //初始化处理后图片的信息
+    bmpImgGaussian = (ZqImage*)malloc(sizeof(ZqImage));
+    bmpImgGaussian->channels = channels;
+    bmpImgGaussian->width = width;
+    bmpImgGaussian->height = height;
+
+    step = channels * width;
+    gaussian_step = bmpImgGaussian->channels * bmpImgGaussian->width;
+    bmpImgGaussian->imageData =
+        (unsigned char*)malloc(sizeof(unsigned char)*bmpImgGaussian->width*bmpImgGaussian->height*bmpImgGaussian->channels);
+
+    //初始化图像
+    for (i=0; i<bmpImgGaussian->height; i++)
+    {
+        for (j=0; j<bmpImgGaussian->width; j++)
+        {
+            bmpImgGaussian->imageData[(bmpImgGaussian->height-1-i)*gaussian_step+j] = 0;
+        }
+    }
+    //滤波处理
+    short value;
+    for(i = 0;i < bmpImgGaussian->height;i++)
+    {
+        for(j = 0;j < bmpImgGaussian->width;j++)
+        {
+            for(k=0; k<channels; k++)
+            {
+                value = (short)study_gaussrand() + bmpImg->imageData[i * step + j*channels + k];
+                if (value > 0xff)
+                    bmpImgGaussian->imageData[i * gaussian_step + j*channels +k] = 0xff;
+                else if (value < 0)
+                    bmpImgGaussian->imageData[i * gaussian_step + j*channels +k] = 0;
+                else
+                    bmpImgGaussian->imageData[i * gaussian_step + j*channels +k] = (unsigned char)value;
+            }
+        }
+    }
+
+    return bmpImgGaussian;
+}
+
+/*太慢了 = =*/
+ZqImage *study_fre_spectrum(ZqImage* bmpImg)
+{
+    //图片f傅里叶处理
+    ZqImage* bmpImgFre;
+    int width = 0;
+    int height = 0;
+    int step = 0;
+    int filter_step = 0;
+    int channels = 1;
+    int i, j, k;
+    width = bmpImg->width;
+    height = bmpImg->height;
+    channels = bmpImg->channels;
+
+    //初始化处理后图片的信息
+    bmpImgFre = (ZqImage*)malloc(sizeof(ZqImage));
+    bmpImgFre->channels = channels;
+    bmpImgFre->width = width;
+    bmpImgFre->height = height;
+
+    step = channels * width;
+    filter_step = bmpImgFre->channels * bmpImgFre->width;
+    bmpImgFre->imageData = (unsigned char*)malloc(sizeof(unsigned char)*bmpImgFre->width*bmpImgFre->height*bmpImgFre->channels);
+
+    //初始化图像
+    for (i=0; i<bmpImgFre->height; i++)
+    {
+        for (j=0; j<bmpImgFre->width; j++)
+        {
+            bmpImgFre->imageData[(bmpImgFre->height-1-i)*filter_step+j] = 0;
+        }
+    }
+
+    double re, im, temp;
+    int move;
+    int x, y;
+    //滤波处理
+    unsigned short value;
+    for(i = 0;i < bmpImgFre->height;i++)
+    {
+        for(j = 0;j < bmpImgFre->width;j++)
+        {
+            for(k=0; k<channels; k++)
+            {
+                re = 0;
+                im = 0;
+                for (x = 0; x < height; x++)
+                {
+                    for (y = 0; y < width; y++){
+                        temp = (double)i * x / (double)height + 
+                               (double)j * y / (double)width;
+                        move = (x + y) % 2 == 0 ? 1 : -1;
+                        re += bmpImg->imageData[x * step + y*channels + k] * cos(-2 * PI * temp) * move;
+                        im += bmpImg->imageData[x * step + y*channels + k] * sin(-2 * PI * temp) * move;
+                    }
+                }
+                value = (short)(sqrt(re*re + im*im) / sqrt(width*height));
+                if (value > 0xff)
+                    bmpImgFre->imageData[i * filter_step + j*channels +k] = 0xff;
+                else if (value < 0)
+                    bmpImgFre->imageData[i * filter_step + j*channels +k] = 0;
+                else
+                    bmpImgFre->imageData[i * filter_step + j*channels +k] = (unsigned char)value;
+            }
+        }
+    }
+
+    return bmpImgFre;
+}
+
 unsigned char study_mid_val(unsigned char *a, int num)
 {
     unsigned char temp;
