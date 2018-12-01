@@ -1,7 +1,7 @@
 ﻿#include "study_cv.h"
 #include <stdlib.h>
 
-unsigned char mid_val(unsigned char *a, int num)
+unsigned char study_mid_val(unsigned char *a, int num)
 {
     unsigned char temp;
     int i = 0;
@@ -55,6 +55,18 @@ ZqImage* study_filtering(ZqImage* bmpImg)
         {2, 4, 2},
         {1, 2, 1}
     };
+    char soble1[3][3] =
+    {
+        {-1, -2, -1},
+        {0, 0, 0},
+        {1, 2, 1}
+    };
+    char soble2[3][3] =
+    {
+        {-1, 0, 1},
+        {-2, 4, 2},
+        {-1, 2, 1}
+    };
     //初始化图像
     for (i=0; i<bmpImgFilter->height; i++)
     {
@@ -93,7 +105,15 @@ ZqImage* study_filtering(ZqImage* bmpImg)
                                 value[2] * average[0][2] + value[3] * average[1][0] + value[4] * average[1][1] + 
                                 value[5] * average[1][2] + value[6] * average[2][0] + value[7] * average[2][1] + value[8] * average[2][2]) / sum;
             /* median filtering */
-            bmpImgFilter->imageData[i * filter_step + j*channels +k] = mid_val(value, 9);
+            bmpImgFilter->imageData[i * filter_step + j*channels +k] = study_mid_val(value, 9);
+            /* sharpening using grad */
+            bmpImgFilter->imageData[i * filter_step + j*channels +k] =
+                (short)abs(value[0] * soble1[0][0] + value[1] * soble1[0][1] + value[2] * soble1[0][2] +
+                         value[3] * soble1[1][0] + value[4] * soble1[1][1] + value[5] * soble1[1][2] +
+                         value[6] * soble1[2][0] + value[7] * soble1[2][1] + value[8] * soble1[2][2]) + 
+                (short)abs(value[0] * soble2[0][0] + value[1] * soble2[0][1] + value[2] * soble2[0][2] +
+                         value[3] * soble2[1][0] + value[4] * soble2[1][1] + value[5] * soble2[1][2] +
+                         value[6] * soble2[2][0] + value[7] * soble2[2][1] + value[8] * soble2[2][2]);
             }
         }
     }
