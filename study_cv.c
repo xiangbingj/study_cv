@@ -1,6 +1,22 @@
 ﻿#include "study_cv.h"
 #include <stdlib.h>
 
+unsigned char mid_val(unsigned char *a, int num)
+{
+    unsigned char temp;
+    int i = 0;
+    for (i = 0; i < num; i++)
+    {
+        temp = a[i];
+        int j = i;
+        for (; j > 0 && a[j - 1] > temp; j--)
+            a[j] = a[j - 1];
+        a[j] = temp;
+    }
+
+    return a[num/2];
+}
+
 int study_is_in_array(short x, short y, short height, short width)
 {
     if (x >= 0 && x < width && y >= 0 && y < height)
@@ -76,6 +92,8 @@ ZqImage* study_filtering(ZqImage* bmpImg)
              bmpImgFilter->imageData[i * filter_step + j*channels +k] = (value[0] * average[0][0] + value[1] * average[0][1] + 
                                 value[2] * average[0][2] + value[3] * average[1][0] + value[4] * average[1][1] + 
                                 value[5] * average[1][2] + value[6] * average[2][0] + value[7] * average[2][1] + value[8] * average[2][2]) / sum;
+            /* median filtering */
+            bmpImgFilter->imageData[i * filter_step + j*channels +k] = mid_val(value, 9);
             }
         }
     }
