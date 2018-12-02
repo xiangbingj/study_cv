@@ -137,27 +137,31 @@ ZqImage *study_PerspectiveTransform(ZqImage* bmpImg)
                                 width-1, 0,
                                 0, height-1,
                                 width-1, height-1,
-                                150, 250, // top left
-                                771, 0, // top right
-                                0, 1023,// bottom left
-                                650, 1023);
-    float *ponits = (float *)malloc(sizeof(float)*height*width);
+                                46, 83, // top left
+                                264, 0, // top right
+                                0, 350,// bottom left
+                                224, 350);
+
+    float *ponits = (float *)malloc(sizeof(float)*height*width*2);
     k = 0;
     for(i=0; i<height; i++)
     {
-		for(int j=0; j<width; j++)
+		for(j=0; j<width; j++)
         {
             ponits[k++] = (float)j;
             ponits[k++] = (float)i;
 		}
 	}
-    transformPoints(&p, ponits, height*width);
+    
+    transformPoints(&p, ponits, height*width*2);
     
     for(i = 0;i < bmpImgPer->height;i++)
     {
         for(j = 0;j < bmpImgPer->width;j++)
         {
-            int tmp = i*step + j;
+            
+            int tmp = i*width + j;
+            //printf("**%d %d\n", i, j);
             int x = ponits[tmp*2];
 		    int y = ponits[tmp*2+1];
             if(x<0 || x > (width-1) || y<0 || y>(height-1))
@@ -168,9 +172,8 @@ ZqImage *study_PerspectiveTransform(ZqImage* bmpImg)
             }
         }
     }
-
-    return bmpImgSalt;
-}
+    free(ponits);
+    return bmpImgPer;
 }
 
 ZqImage *study_add_salt_pepper_noise(ZqImage* bmpImg)
@@ -622,3 +625,4 @@ ZqImage* study_bpp24_to_grayscale(ZqImage* bmpImg)
 
     return bmpImgGray;
 }
+

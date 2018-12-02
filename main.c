@@ -4,12 +4,12 @@
 
 int main(int argc, char* argv[])
 {
-    ZqImage* img = imread("lena/SaltResult.bmp");//读取原始图像(灰度或彩色)
-    ZqImage* imgFilter = study_filtering(img);
+    ZqImage* img = imread("lena/baby_24.bmp");//读取原始图像(灰度或彩色)
+    ZqImage* imgPer = study_PerspectiveTransform(img);
 
     //输出图像
     imwrite("Result.bmp", img);
-    imwrite("SaltResult.bmp", imgFilter);
+    imwrite("perResult.bmp", imgPer);
     getchar();
     return 0;
 }
