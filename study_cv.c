@@ -1,6 +1,178 @@
 ﻿#include "study_cv.h"
 #include <stdlib.h>
 
+void times(PerspectiveTransform *p, PerspectiveTransform *other, PerspectiveTransform *ret_p)
+{
+    ret_p->a11 = p->a11 * other->a11 + p->a21 * other->a12 + p->a31 * other->a13;
+    ret_p->a21 = p->a11 * other->a21 + p->a21 * other->a22 + p->a31 * other->a23;
+    ret_p->a31 = p->a11 * other->a31 + p->a21 * other->a32 + p->a31* other->a33;
+    ret_p->a12 = p->a12 * other->a11 + p->a22 * other->a12 + p->a32 * other->a13;
+    ret_p->a22 = p->a12 * other->a21 + p->a22 * other->a22 + p->a32 * other->a23;
+    ret_p->a32 = p->a12 * other->a31 + p->a22 * other->a32 + p->a32 * other->a33;
+    ret_p->a13 = p->a13 * other->a11 + p->a23 * other->a12 + p->a33 * other->a13;
+    ret_p->a23 = p->a13 * other->a21 + p->a23 * other->a22 + p->a33 * other->a23;
+    ret_p->a33 = p->a13 * other->a31 + p->a23 * other->a32 + p->a33 * other->a33;
+}
+
+void quadrilateralToQuadrilateral(PerspectiveTransform *ret_p, float x0, float y0, float x1, float y1,float x2, float y2, float x3, float y3,
+                                float x0p, float y0p, float x1p, float y1p, float x2p, float y2p, float x3p, float y3p)
+{
+    PerspectiveTransform q_to_s;
+    PerspectiveTransform s_to_q;
+    quadrilateralToSquare(&q_to_s, x0, y0, x1, y1, x2, y2, x3, y3);
+    squareToQuadrilateral(&s_to_q, x0p, y0p, x1p, y1p, x2p, y2p, x3p, y3p);
+    times(&s_to_q, &q_to_s, ret_p);
+}
+
+void quadrilateralToSquare(PerspectiveTransform *ret_p, float x0, float y0, float x1, float y1,
+                            float x2, float y2, float x3, float y3) 
+{
+  // Here, the adjoint serves as the inverse:
+  PerspectiveTransform p;
+  squareToQuadrilateral(&p, x0, y0, x1, y1, x2, y2, x3, y3);
+  buildAdjoint(&p, ret_p);
+}
+
+void squareToQuadrilateral(PerspectiveTransform *ret_p, float x0, float y0, float x1, float y1,
+                            float x2, float y2, float x3, float y3)
+{
+      float dx3 = x0 - x1 + x2 - x3;
+      float dy3 = y0 - y1 + y2 - y3;
+      if (dx3 == 0.0f && dy3 == 0.0f) 
+      {
+        ret_p->a11 = x1 - x0;
+        ret_p->a21 = x2 - x1;
+        ret_p->a31 = x0;
+        ret_p->a12 = y1 - y0;
+        ret_p->a22 = y2 - y1;
+        ret_p->a32 = y0;
+        ret_p->a13 = 0.0f;
+        ret_p->a23 = 0.0f;
+        ret_p->a33 = 1.0f;
+      } 
+      else 
+      {
+        float dx1 = x1 - x2;
+        float dx2 = x3 - x2;
+        float dy1 = y1 - y2;
+        float dy2 = y3 - y2;
+        float denominator = dx1 * dy2 - dx2 * dy1;
+        float a13 = (dx3 * dy2 - dx2 * dy3) / denominator;
+        float a23 = (dx1 * dy3 - dx3 * dy1) / denominator;
+        ret_p->a11 = x1 - x0 + a13 * x1;
+        ret_p->a21 = x3 - x0 + a23 * x3;
+        ret_p->a31 = x0;
+        ret_p->a12 = y1 - y0 + a13 * y1;
+        ret_p->a22 = y3 - y0 + a23 * y3;
+        ret_p->a32 = y0;
+        ret_p->a13 = a13;
+        ret_p->a23 = a23;
+        ret_p->a33 = 1.0f;
+      }
+}
+
+void buildAdjoint(PerspectiveTransform *p, PerspectiveTransform *ret_p) 
+{
+    ret_p->a11 = p->a22 * p->a33 - p->a23 * p->a32;
+    ret_p->a21 = p->a23 * p->a31 - p->a21 * p->a33;
+    ret_p->a31 = p->a21 * p->a32 - p->a22 * p->a31;
+    ret_p->a12 = p->a13 * p->a32 - p->a12 * p->a33;
+    ret_p->a22 = p->a11 * p->a33 - p->a13 * p->a31;
+    ret_p->a32 = p->a12 * p->a31 - p->a11 * p->a32;
+    ret_p->a13 = p->a12 * p->a23 - p->a13 * p->a22;
+    ret_p->a23 = p->a13 * p->a21 - p->a11 * p->a23;
+    ret_p->a33 = p->a11 * p->a22 - p->a12 * p->a21;
+}
+
+void transformPoints(PerspectiveTransform *p, float *points, int len)
+{
+  int max = len;
+  int i = 0;
+  for (i = 0; i < max; i += 2) {
+    float x = points[i];
+    float y = points[i + 1];
+    float denominator = p->a13 * x + p->a23 * y + p->a33;
+    points[i] = (p->a11 * x + p->a21 * y + p->a31) / denominator;
+    points[i + 1] = (p->a12 * x + p->a22 * y + p->a32) / denominator;
+  }
+}
+
+ZqImage *study_PerspectiveTransform(ZqImage* bmpImg)
+{
+    //投影变换
+    ZqImage* bmpImgPer;
+    int width = 0;
+    int height = 0;
+    int step = 0;
+    int salt_step = 0;
+    int channels = 1;
+    int i, j, k;
+    width = bmpImg->width;
+    height = bmpImg->height;
+    channels = bmpImg->channels;
+
+    //初始化处理后图片的信息
+    bmpImgPer = (ZqImage*)malloc(sizeof(ZqImage));
+    bmpImgPer->channels = channels;
+    bmpImgPer->width = width;
+    bmpImgPer->height = height;
+
+    step = channels * width;
+    salt_step = bmpImgPer->channels * bmpImgPer->width;
+    bmpImgPer->imageData =
+        (unsigned char*)malloc(sizeof(unsigned char)*bmpImgPer->width*bmpImgPer->height*bmpImgPer->channels);
+
+    //初始化图像
+    for (i=0; i<bmpImgPer->height; i++)
+    {
+        for (j=0; j<bmpImgPer->width; j++)
+        {
+            bmpImgPer->imageData[(bmpImgPer->height-1-i)*salt_step+j] = 0;
+        }
+    }
+
+    PerspectiveTransform p;
+    quadrilateralToQuadrilateral(&p,
+                                0, 0,
+                                width-1, 0,
+                                0, height-1,
+                                width-1, height-1,
+                                150, 250, // top left
+                                771, 0, // top right
+                                0, 1023,// bottom left
+                                650, 1023);
+    float *ponits = (float *)malloc(sizeof(float)*height*width);
+    k = 0;
+    for(i=0; i<height; i++)
+    {
+		for(int j=0; j<width; j++)
+        {
+            ponits[k++] = (float)j;
+            ponits[k++] = (float)i;
+		}
+	}
+    transformPoints(&p, ponits, height*width);
+    
+    for(i = 0;i < bmpImgPer->height;i++)
+    {
+        for(j = 0;j < bmpImgPer->width;j++)
+        {
+            int tmp = i*step + j;
+            int x = ponits[tmp*2];
+		    int y = ponits[tmp*2+1];
+            if(x<0 || x > (width-1) || y<0 || y>(height-1))
+				    continue;
+            for(k=0; k<channels; k++)
+            {
+                bmpImgPer->imageData[i * salt_step + j*channels +k] = bmpImg->imageData[y * step + x*channels + k];
+            }
+        }
+    }
+
+    return bmpImgSalt;
+}
+}
+
 ZqImage *study_add_salt_pepper_noise(ZqImage* bmpImg)
 {
     //生成椒盐噪声
