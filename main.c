@@ -5,7 +5,7 @@
 int main(int argc, char* argv[])
 {
     ZqImage* img = imread("lena/baby_24.bmp");//读取原始图像(灰度或彩色)
-    ZqImage* imgPer = study_PerspectiveTransform(img);
+    ZqImage* imgPer = study_PerspectiveTransform_new(img);
 
     //输出图像
     imwrite("Result.bmp", img);

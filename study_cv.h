@@ -31,5 +31,6 @@ ZqImage* study_filtering(ZqImage* bmpImg);
 ZqImage* study_fre_spectrum(ZqImage* bmpImg);
 ZqImage *study_add_gaussian_noise(ZqImage* bmpImg);
 ZqImage *study_add_salt_pepper_noise(ZqImage* bmpImg);
+ZqImage *study_PerspectiveTransform_new(ZqImage* bmpImg);
 
 #endif

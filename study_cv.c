@@ -1,6 +1,209 @@
 ﻿#include "study_cv.h"
 #include <stdlib.h>
 
+#define N 8    //测试矩阵维数定义
+
+//按第一行展开计算|A|
+double getA(double arcs[N][N], int n)
+{
+    if (n == 1)
+    {
+        return arcs[0][0];
+    }
+    double ans = 0;
+    double temp[N][N] = { 0.0 };
+    int i, j, k;
+    for (i = 0; i<n; i++)
+    {
+        for (j = 0; j<n - 1; j++)
+        {
+            for (k = 0; k<n - 1; k++)
+            {
+                temp[j][k] = arcs[j + 1][(k >= i) ? k + 1 : k];
+
+            }
+        }
+        double t = getA(temp, n - 1);
+        if (i % 2 == 0)
+        {
+            ans += arcs[0][i] * t;
+        }
+        else
+        {
+            ans -= arcs[0][i] * t;
+        }
+    }
+    return ans;
+}
+
+//计算每一行每一列的每个元素所对应的余子式，组成A*
+void  getAStart(double arcs[N][N], int n, double ans[N][N])
+{
+    if (n == 1)
+    {
+        ans[0][0] = 1;
+        return;
+    }
+    int i, j, k, t;
+    double temp[N][N];
+    for (i = 0; i<n; i++)
+    {
+        for (j = 0; j<n; j++)
+        {
+            for (k = 0; k<n - 1; k++)
+            {
+                for (t = 0; t<n - 1; t++)
+                {
+                    temp[k][t] = arcs[k >= i ? k + 1 : k][t >= j ? t + 1 : t];
+                }
+            }
+
+
+            ans[j][i] = getA(temp, n - 1);  //此处顺便进行了转置
+            if ((i + j) % 2 == 1)
+            {
+                ans[j][i] = -ans[j][i];
+            }
+        }
+    }
+}
+
+//得到给定矩阵src的逆矩阵保存到des中。
+bool GetMatrixInverse(double src[N][N], int n, double des[N][N])
+{
+    double flag = getA(src, n);
+    double t[N][N];
+    if (0 == flag)
+    {
+        printf("原矩阵行列式为0，无法求逆。请重新运行\n");
+        return false;//如果算出矩阵的行列式为0，则不往下进行
+    }
+    else
+    {
+        getAStart(src, n, t);
+        for (int i = 0; i<n; i++)
+        {
+            for (int j = 0; j<n; j++)
+            {
+                des[i][j] = t[i][j] / flag;
+            }
+
+        }
+    }
+
+    return true;
+}
+
+ZqImage *study_PerspectiveTransform_new(ZqImage* bmpImg)
+{
+    //投影变换
+    ZqImage* bmpImgPer;
+    int width = 0;
+    int height = 0;
+    int step = 0;
+    int salt_step = 0;
+    int channels = 1;
+    int i, j, k;
+    width = bmpImg->width;
+    height = bmpImg->height;
+    channels = bmpImg->channels;
+
+    //初始化处理后图片的信息
+    bmpImgPer = (ZqImage*)malloc(sizeof(ZqImage));
+    bmpImgPer->channels = channels;
+    bmpImgPer->width = width;
+    bmpImgPer->height = height;
+
+    step = channels * width;
+    salt_step = bmpImgPer->channels * bmpImgPer->width;
+    bmpImgPer->imageData =
+        (unsigned char*)malloc(sizeof(unsigned char)*bmpImgPer->width*bmpImgPer->height*bmpImgPer->channels);
+
+    //初始化图像
+    for (i=0; i<bmpImgPer->height; i++)
+    {
+        for (j=0; j<bmpImgPer->width; j++)
+        {
+            bmpImgPer->imageData[(bmpImgPer->height-1-i)*salt_step+j] = 0;
+        }
+    }
+
+    int P[8] = {
+                    0, 0,
+                    width-1, 0,
+                    0, height-1,
+                    width-1, height-1,
+                };
+    int uv[8] = {
+                46, 83, // top left
+                264, 0, // top right
+                0, 350,// bottom left
+                224, 350
+            };
+    double src[8][8] =
+    {
+        { P[0], P[1], 1, 0, 0, 0, -uv[0]*P[0], -uv[0]*P[1] },
+        { 0, 0, 0, P[0], P[1], 1, -uv[1]*P[0], -uv[1]*P[1] },
+
+        { P[2], P[3], 1, 0, 0, 0, -uv[2]*P[2], -uv[2]*P[3] },
+        { 0, 0, 0, P[2], P[3], 1, -uv[3]*P[2], -uv[3]*P[3] },
+
+        { P[4], P[5], 1, 0, 0, 0, -uv[4]*P[4], -uv[4]*P[5] },
+        { 0, 0, 0, P[4], P[5], 1, -uv[5]*P[4], -uv[5]*P[5] },
+
+        { P[6], P[7], 1, 0, 0, 0, -uv[6]*P[6], -uv[6]*P[7] },
+        { 0, 0, 0, P[6], P[7], 1, -uv[7]*P[6], -uv[7]*P[7] }
+    };
+    double matrix_after[N][N]={0};
+    bool flag = GetMatrixInverse(src, N, matrix_after);
+    if (false == flag) {
+        printf("求不出系数\n");
+        return;
+    }
+    printf("逆矩阵：\n");
+
+    for (int i = 0; i<8; i++)
+    {
+        for (int j = 0; j<8; j++)
+        {
+            printf("%f .", matrix_after[i][j]);
+            //cout << matrix_after[i][j] << " ";
+            //cout << *(*(matrix_after+i)+j)<<" ";
+        }
+        printf("\n");
+        //cout << endl;
+    }
+
+    double xs[8];
+    for (int i = 0; i < 8; i++) {
+        double sum = 0;
+        for (int t = 0; t < 8; t++) {
+            sum += matrix_after[i][t] * uv[t];
+        }
+        xs[i] = sum;
+    }
+
+    for(i = 0;i < bmpImgPer->height;i++)
+    {
+        for(j = 0;j < bmpImgPer->width;j++)
+        {
+            double px = xs[0] * j + xs[1] * i + xs[2];
+            double py = xs[3] * j + xs[4] * i + xs[5];
+            double p = xs[6] * j + xs[7] * i + 1;
+
+            int x = px / p;
+            int y = py / p;
+            if(x<0 || x > (width-1) || y<0 || y>(height-1))
+				    continue;
+            for(k=0; k<channels; k++)
+            {
+                bmpImgPer->imageData[i * salt_step + j*channels +k] = bmpImg->imageData[y * step + x*channels + k];
+            }
+        }
+    }
+    return bmpImgPer;
+}
+
 void times(PerspectiveTransform *p, PerspectiveTransform *other, PerspectiveTransform *ret_p)
 {
     ret_p->a11 = p->a11 * other->a11 + p->a21 * other->a12 + p->a31 * other->a13;
