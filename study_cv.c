@@ -1,6 +1,135 @@
 ﻿#include "study_cv.h"
 #include <stdlib.h>
 
+void svd22(const double a[4], double u[4], double s[2], double v[4]) {
+    s[0] = (sqrt(pow(a[0] - a[3], 2) + pow(a[1] + a[2], 2)) + sqrt(pow(a[0] + a[3], 2) + pow(a[1] - a[2], 2))) / 2;
+    s[1] = fabs(s[0] - sqrt(pow(a[0] - a[3], 2) + pow(a[1] + a[2], 2)));
+    v[2] = (s[0] > s[1]) ? sin((atan2(2 * (a[0] * a[1] + a[2] * a[3]), a[0] * a[0] - a[1] * a[1] + a[2] * a[2] - a[3] * a[3])) / 2) : 0;
+    v[0] = sqrt(1 - v[2] * v[2]);
+    v[1] = -v[2];
+    v[3] = v[0];
+    u[0] = (s[0] != 0) ? -(a[0] * v[0] + a[1] * v[2]) / s[0] : 1;
+    u[2] = (s[0] != 0) ? -(a[2] * v[0] + a[3] * v[2]) / s[0] : 0;
+    u[1] = (s[1] != 0) ? (a[0] * v[1] + a[1] * v[3]) / s[1] : -u[2];
+    u[3] = (s[1] != 0) ? (a[2] * v[1] + a[3] * v[3]) / s[1] : u[0];
+    v[0] = -v[0];
+    v[2] = -v[2];
+}
+
+#define SRC_NUM 5
+#define SRC_DIM 2
+double *_umeyama(double *src, double *dst, double estimate_scale)
+{
+    int i, j, k;
+    double src_mean[SRC_DIM] = { 0.0 };
+    double dst_mean[SRC_DIM] = { 0.0 };
+    for(i=0; i<SRC_NUM*2; i+=2)
+    {
+        src_mean[0] += src[i];
+        src_mean[1] += src[i+1];
+        dst_mean[0] += dst[i];
+        dst_mean[1] += dst[i+1];
+    }
+    src_mean[0] /= SRC_NUM;
+    src_mean[1] /= SRC_NUM;
+    dst_mean[0] /= SRC_NUM;
+    dst_mean[1] /= SRC_NUM;
+    printf("%f %f %f %f \n", src_mean[0], src_mean[1], dst_mean[0], dst_mean[1]);
+
+    double src_demean[SRC_NUM][2] = {0.0};
+    double dst_demean[SRC_NUM][2] = {0.0};
+
+    for(i=0; i<SRC_NUM; i++)
+    {
+        src_demean[i][0] = src[2*i] - src_mean[0];
+        src_demean[i][1] = src[2*i+1] - src_mean[1];
+        dst_demean[i][0] = dst[2*i] - dst_mean[0];
+        dst_demean[i][1] = dst[2*i+1] - dst_mean[1];
+        printf("%f %f %f %f\n", src_demean[i][0], src_demean[i][1], dst_demean[i][0], dst_demean[i][1]);
+    }
+
+    double A[SRC_DIM][SRC_DIM] = {0.0};
+    for(i=0; i<SRC_DIM; i++)
+    {
+        for(k=0; k<SRC_DIM; k++)
+        {
+            for(j=0; j<SRC_NUM; j++)
+            {
+                A[i][k] += dst_demean[j][i]*src_demean[j][k];
+            }
+            A[i][k] /= SRC_NUM;
+            printf("A[%d][%d] = %f \n", i, k, A[i][k]);
+        }
+    }
+
+    double d[SRC_DIM] = {1, 1};
+    double det_A = A[0][0]*A[1][1] - A[1][0]*A[1][0];
+    printf("%f \n", det_A);
+    if(det_A < 0)
+        d[SRC_DIM-1] = -1;
+
+    double T[SRC_DIM+1][SRC_DIM+1] =
+    {
+        {1, 0, 0},
+        {0, 1, 0},
+        {0, 0, 1}
+    };
+
+    double U[SRC_DIM][SRC_DIM] = {0};
+    double S[SRC_DIM] = {0};
+    double V[SRC_DIM][SRC_DIM] = {0};
+    svd22(&A[0][0], &U[0][0], S, &V[0][0]);
+    printf("S[0] = %f S[1] = %f\n", S[0], S[1]);
+    printf("U[0][0] = %f U[0][1] = %f U[1][0] = %f U[1][1] = %f\n", U[0][0], U[0][1], U[1][0], U[1][1]);
+    printf("V[0][0] = %f V[0][1] = %f V[1][0] = %f V[1][1] = %f\n", V[0][0], V[0][1], V[1][0], V[1][1]);
+
+    double diag_d[SRC_DIM][SRC_DIM] = 
+        {
+            {1.0, 0.0},
+            {0.0, 1.0}
+        };
+    T[0][0] = U[0][0]*V[0][0] + U[0][1]*V[1][0];
+    T[0][1] = U[0][0]*V[0][1] + U[0][1]*V[1][1];
+    T[1][0] = U[1][0]*V[0][0] + U[1][1]*V[1][0];
+    T[1][1] = U[1][0]*V[0][1] + U[1][1]*V[1][1];
+    printf("T[0][0] = %f T[0][1] = %f T[1][0] = %f T[1][1] = %f \n", T[0][0], T[0][1], T[1][0], T[1][1]);
+
+    double scale = 1.0;
+    double src_demean_mean[SRC_DIM] = {0.0};
+    double src_demean_var[SRC_DIM] = {0.0};
+    for(i=0; i<SRC_NUM; i++)
+    {
+        src_demean_mean[0] += src_demean[i][0];
+        src_demean_mean[1] += src_demean[i][1];
+    }
+    src_demean_mean[0] /= SRC_NUM;
+    src_demean_mean[1] /= SRC_NUM;
+    
+    for(i=0; i<SRC_NUM; i++)
+    {
+        src_demean_var[0] += (src_demean_mean[0] - src_demean[i][0])*(src_demean_mean[0] - src_demean[i][0]);
+        src_demean_var[1] += (src_demean_mean[1] - src_demean[i][1])*(src_demean_mean[1] - src_demean[i][1]);
+    }
+    src_demean_var[0] /= (SRC_NUM);
+    src_demean_var[1] /= (SRC_NUM);
+    printf("%f %f\n", src_demean_var[0], src_demean_var[1]);
+    scale = 1.0 / (src_demean_var[0] + src_demean_var[1]) *(S[0] + S[1]);
+    printf("scale = %f\n", scale);
+    T[0][2] = dst_mean[0] - scale*(T[0][0]*src_mean[0] + T[0][1]*src_mean[1]);
+    T[1][2] = dst_mean[1] - scale*(T[1][0]*src_mean[0] + T[1][1]*src_mean[1]);
+    T[0][0] *= scale;
+    T[0][1] *= scale;
+    T[1][0] *= scale;
+    T[1][1] *= scale;
+    for(i=0; i<3; i++)
+    {
+        for(j=0; j<3; j++)
+            printf("T[%d][%d] = %f ", i, j, T[i][j]);
+        printf("\n");
+    }
+}
+
+
 ZqImage *imshear(ZqImage *img, int angle, char axis)
 {
     //图片错切处理
