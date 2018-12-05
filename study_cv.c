@@ -1,6 +1,89 @@
 ﻿#include "study_cv.h"
 #include <stdlib.h>
 
+ZqImage *imshear(ZqImage *img, int angle, char axis)
+{
+    //图片错切处理
+    ZqImage *img_shear;
+    double x_shear_angle;//要旋转的弧度数
+    double y_shear_angle;//要旋转的弧度数
+    int width = 0;
+    int height = 0;
+    int step = 0;
+    int shear_step = 0;
+    int channels = 1;
+    int x, y;
+    unsigned short color[2][2];
+    unsigned char blue[2][2];
+    unsigned char green[2][2];
+    unsigned char red[2][2];
+    unsigned short rgb;
+    int i, j, k;
+    width = img->width;
+    height = img->height;
+    channels = img->channels;
+    int midx_pre, midy_pre, midx_aft, midy_aft;//旋转前的中心点的坐标
+    midx_pre = width / 2;
+    midy_pre = height / 2;
+    int pre_i, pre_j, after_i, after_j;//旋转前后对应的像素点坐标
+    x_shear_angle = 1.0 * angle * PI / 180;
+    y_shear_angle = 1.0 * angle * PI / 180;
+    double x_tan_calc = tan((double)x_shear_angle);
+    double y_tan_calc = tan((double)y_shear_angle);
+    printf("x_tan_calc = %f \n", x_tan_calc);
+    //初始化旋转后图片的信息
+    img_shear = (ZqImage *)malloc(sizeof(ZqImage));
+    img_shear->channels = channels;
+    if(axis == 'x')
+    {
+        img_shear->width = width + abs(x_tan_calc * height);
+        img_shear->height = height;
+        if(img_shear->width % 4 != 0)
+			img_shear->width = (img_shear->width / 4 + 1) * 4;
+    }
+	else
+    {
+        img_shear->width = width;
+        img_shear->height = height + abs(y_tan_calc * width);
+    }
+    midx_aft = img_shear->width / 2;
+    midy_aft = img_shear->height / 2;
+    img_shear->imageData = (unsigned char*)malloc(sizeof(unsigned char)*img_shear->width*img_shear->height*channels);
+	step = width*channels;
+    shear_step = img_shear->width*channels;
+	int color_step = width * height;
+	int rot_color_step = img_shear->width * img_shear->height;
+
+    //坐标变换
+    for (i = 0; i < img_shear->height; i++)
+    {
+        for (j = 0; j < img_shear->width; j++)
+        {
+            if(axis == 'x')
+            {
+                pre_i = i - midy_aft + midy_pre;
+                pre_j = (j ) - x_tan_calc*(i) - midx_aft + midy_aft*x_tan_calc + midx_pre;
+            }
+            else
+            {
+                pre_i = i - y_tan_calc*(j) - midy_aft + midx_aft*y_tan_calc + midy_pre;
+                pre_j = j - midx_aft + midx_pre;
+            }
+
+            if (pre_i >= 0 && pre_i < height && pre_j >= 0 && pre_j < width)//在原图范围内
+            {
+                for (k = 0; k < channels; k++)
+                {
+                    img_shear->imageData[i*shear_step + j *channels + k] = img->imageData[pre_i*step + pre_j*channels + k];
+                }
+
+            }
+        }
+    }
+    return img_shear;
+}
+
+
 #define N 8    //测试矩阵维数定义
 
 //按第一行展开计算|A|
