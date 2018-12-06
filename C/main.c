@@ -7,6 +7,14 @@ int main(int argc, char* argv[])
 #define PIC_SIZE 128
 #define MARGIN_SIZE 48
     ZqImage* img = imread("../lena/pic_left_red.bmp");//读取原始图像(灰度或彩色)
+    ZqImage* img_2ch = study_3ch_to_2ch(img);
+    free(img);
+    img = study_2ch_to_3ch(img_2ch);
+    free(img_2ch);
+    ZqImage* img_rrr = rgb_to_rrrgggbbb(img);
+    free(img);
+    img = rrrgggbbb_to_rgb(img_rrr);
+    free(img_rrr);
     //计算标准的人脸五点坐标，转换成128*128+margin的图片格式。
     double dst[5][2] =  
         {

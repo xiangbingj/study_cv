@@ -9,6 +9,10 @@
 #define STUDY_DBG(fmt, args...)
 #endif
 
+ZqImage *rrrgggbbb_to_rgb(ZqImage *bmpImg);
+ZqImage *rgb_to_rrrgggbbb(ZqImage *bmpImg);
+ZqImage *study_2ch_to_3ch(ZqImage *img_2ch);
+ZqImage *study_3ch_to_2ch(ZqImage *img_3ch);
 ZqImage *study_PerspectiveTransform(ZqImage* bmpImg);
 ZqImage* study_bpp24_to_grayscale(ZqImage* bmpImg);
 ZqImage* study_imgamma(ZqImage* bmpImg);

@@ -1128,3 +1128,213 @@ ZqImage* study_bpp24_to_grayscale(ZqImage* bmpImg)
     return bmpImgGray;
 }
 
+ZqImage *study_3ch_to_2ch(ZqImage *img_3ch)
+{
+    //三通道图片转成供LCD显示的图片格式
+    ZqImage *img_2ch;
+    int width = 0;
+    int height = 0;
+    int channels = 1;
+    int step_3ch = 0;
+    int step_2ch = 0;
+    int i, j;
+    width = img_3ch->width;
+    height = img_3ch->height;
+    channels = img_3ch->channels;
+
+    img_2ch = (ZqImage *)malloc(sizeof(ZqImage));
+    img_2ch->channels = 2;
+    img_2ch->width = width;
+    img_2ch->height = height;
+    step_3ch = channels * width;
+    step_2ch = img_2ch->channels * img_2ch->width;
+    img_2ch->imageData = (unsigned char*)malloc(sizeof(unsigned char)*img_2ch->width*img_2ch->height*img_2ch->channels);
+
+    unsigned short blue;
+    unsigned short green;
+    unsigned short red;
+    unsigned short rgb;
+
+    //坐标变换
+    for (j = 0; j < img_2ch->height; j++)
+    {
+        for (i = 0; i < img_2ch->width; i++)
+        {
+            blue = img_3ch->imageData[j * step_3ch + i * 3];
+            green = img_3ch->imageData[j * step_3ch + i * 3 + 1];
+            red = img_3ch->imageData[j * step_3ch + i * 3 + 2];
+            rgb = (((red >> 3) & 0x1f) << 11) | (((green >> 2) & 0x3f) << 5) | (((blue >> 3) & 0x1f) << 0);
+
+            img_2ch->imageData[j * step_2ch + i * 2] = (unsigned char)rgb & 0xff;
+            img_2ch->imageData[j * step_2ch + i * 2 + 1] = (unsigned char)(rgb >> 8) & 0xff;
+        }
+    }
+    return img_2ch;
+}
+
+ZqImage *study_2ch_to_3ch(ZqImage *img_2ch)
+{
+    //LCD处理的图片读出转成三通道bmp格式
+    ZqImage *img_3ch;
+    int width = 0;
+    int height = 0;
+    int channels = 1;
+    int step_2ch = 0;
+    int step_3ch = 0;
+    int i, j;
+    width = img_2ch->width;
+    height = img_2ch->height;
+    channels = img_2ch->channels;
+
+    img_3ch = (ZqImage *)malloc(sizeof(ZqImage));
+    img_3ch->channels = 3;
+    img_3ch->width = width;
+    img_3ch->height = height;
+    step_2ch = channels * width;
+    step_3ch = img_3ch->channels * img_3ch->width;
+    img_3ch->imageData = (unsigned char*)malloc(sizeof(unsigned char)*img_3ch->width*img_3ch->height*img_3ch->channels);
+
+    unsigned char blue;
+    unsigned char green;
+    unsigned char red;
+    unsigned short rgb;
+
+    //坐标变换
+    for (j = 0; j < img_3ch->height; j++)
+    {
+        for (i = 0; i < img_3ch->width; i++)
+        {
+            rgb = img_2ch->imageData[j * step_2ch + i * 2] | (img_2ch->imageData[j * step_2ch + i * 2 + 1] << 8);
+            
+            blue = (rgb & 0x1f) << 3;
+            green = ((rgb >> 5) & 0x3f) << 2;
+            red = ((rgb >> 11) & 0x1f) << 3;
+
+            img_3ch->imageData[j * step_3ch + i * 3] = blue;
+            img_3ch->imageData[j * step_3ch + i * 3 + 1] = green;
+            img_3ch->imageData[j * step_3ch + i * 3 + 2] = red;
+        }
+    }
+    return img_3ch;
+}
+
+ZqImage *rgb_to_rrrgggbbb(ZqImage *bmpImg)
+{
+    /*
+     * AI处理的像素在内存中是是这样的格式：rrr..ggg..bbb..
+     * LCD的像素在内存中的格式是：rgbrgbrgbbrgb...
+     */
+    ZqImage *img_out;
+    int width = 0;
+    int height = 0;
+    int channels = 1;
+    int step = 0;
+    int cov_step = 0;
+    int i, j;
+    width = bmpImg->width;
+    height = bmpImg->height;
+    channels = bmpImg->channels;
+
+    img_out = (ZqImage *)malloc(sizeof(ZqImage));
+    img_out->channels = 3;
+    img_out->width = width;
+    img_out->height = height;
+    step = channels * width;
+    cov_step = img_out->channels * img_out->width;
+    img_out->imageData = (unsigned char*)malloc(sizeof(unsigned char)*img_out->width*img_out->height*img_out->channels);
+
+    unsigned short blue;
+    unsigned short green;
+    unsigned short red;
+    unsigned short rgb;
+    int count = 0;
+
+    for (j = 0; j < img_out->height; j++)
+    {
+        for (i = 0; i < img_out->width; i++)
+        {
+            blue = bmpImg->imageData[j * step + i * 3];
+            img_out->imageData[count ++] = (unsigned char)blue & 0xff;
+        }
+    }
+	for (j = 0; j < img_out->height; j++)
+    {
+        for (i = 0; i < img_out->width; i++)
+        {
+            green = bmpImg->imageData[j * step + i * 3 + 1];
+            img_out->imageData[count ++] = (unsigned char)green & 0xff;
+        }
+    }
+	for (j = 0; j < img_out->height; j++)
+    {
+        for (i = 0; i < img_out->width; i++)
+        {
+            red = bmpImg->imageData[j * step + i * 3 + 2];
+            img_out->imageData[count ++] = (unsigned char)red & 0xff;
+        }
+    }
+    return img_out;
+}
+
+ZqImage *rrrgggbbb_to_rgb(ZqImage *bmpImg)
+{
+    /*
+     * AI处理的像素在内存中是是这样的格式：rrr..ggg..bbb..
+     * LCD的像素在内存中的格式是：rgbrgbrgbbrgb...
+     */
+    ZqImage *img_out;
+    int width = 0;
+    int height = 0;
+    int channels = 1;
+    int step = 0;
+    int cov_step = 0;
+    int i, j;
+    width = bmpImg->width;
+    height = bmpImg->height;
+    channels = bmpImg->channels;
+
+    img_out = (ZqImage *)malloc(sizeof(ZqImage));
+    img_out->channels = 3;
+    img_out->width = width;
+    img_out->height = height;
+    step = channels * width;
+    cov_step = img_out->channels * img_out->width;
+    img_out->imageData = (unsigned char*)malloc(sizeof(unsigned char)*img_out->width*img_out->height*img_out->channels);
+
+    unsigned short blue;
+    unsigned short green;
+    unsigned short red;
+    unsigned short rgb;
+    int count = 0;
+
+    for (j = 0; j < img_out->height; j++)
+    {
+        for (i = 0; i < img_out->width; i++)
+        {
+            blue = bmpImg->imageData[count++];
+
+            img_out->imageData[j * cov_step + i * 3 + 0] = (unsigned char)blue & 0xff;
+        }
+    }
+	for (j = 0; j < img_out->height; j++)
+    {
+        for (i = 0; i < img_out->width; i++)
+        {
+            green = bmpImg->imageData[count++];
+
+            img_out->imageData[j * cov_step + i * 3 + 1] = (unsigned char)green & 0xff;
+        }
+    }
+	for (j = 0; j < img_out->height; j++)
+    {
+        for (i = 0; i < img_out->width; i++)
+        {
+            red = bmpImg->imageData[count++];
+
+            img_out->imageData[j * cov_step + i * 3 + 2] = (unsigned char)red & 0xff;
+        }
+    }
+    return img_out;
+}
+
+
