@@ -2,6 +2,13 @@
 #define STUDY_CV_H
 #include "zq_cv.h"
 
+//#define STUDY_DBUG
+#ifdef STUDY_DBUG
+#define STUDY_DBG(fmt, args...) printf(fmt, ##args)
+#else
+#define STUDY_DBG(fmt, args...)
+#endif
+
 typedef struct _PerspectiveTransform
 {
     float a11;
@@ -33,6 +40,6 @@ ZqImage *study_add_gaussian_noise(ZqImage* bmpImg);
 ZqImage *study_add_salt_pepper_noise(ZqImage* bmpImg);
 ZqImage *study_PerspectiveTransform_new(ZqImage* bmpImg);
 ZqImage *imshear(ZqImage *img, int angle, char axis);
-double *_umeyama(double *src, double *dst, double estimate_scale);
-
+double *_umeyama(double *src, double *dst);
+ZqImage *study_similarity(ZqImage* bmpImg, double *T);
 #endif

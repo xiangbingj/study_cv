@@ -18,7 +18,7 @@ void svd22(const double a[4], double u[4], double s[2], double v[4]) {
 
 #define SRC_NUM 5
 #define SRC_DIM 2
-double *_umeyama(double *src, double *dst, double estimate_scale)
+double *_umeyama(double *src, double *dst)
 {
     int i, j, k;
     double src_mean[SRC_DIM] = { 0.0 };
@@ -34,7 +34,7 @@ double *_umeyama(double *src, double *dst, double estimate_scale)
     src_mean[1] /= SRC_NUM;
     dst_mean[0] /= SRC_NUM;
     dst_mean[1] /= SRC_NUM;
-    printf("%f %f %f %f \n", src_mean[0], src_mean[1], dst_mean[0], dst_mean[1]);
+    STUDY_DBG("%f %f %f %f \n", src_mean[0], src_mean[1], dst_mean[0], dst_mean[1]);
 
     double src_demean[SRC_NUM][2] = {0.0};
     double dst_demean[SRC_NUM][2] = {0.0};
@@ -45,7 +45,7 @@ double *_umeyama(double *src, double *dst, double estimate_scale)
         src_demean[i][1] = src[2*i+1] - src_mean[1];
         dst_demean[i][0] = dst[2*i] - dst_mean[0];
         dst_demean[i][1] = dst[2*i+1] - dst_mean[1];
-        printf("%f %f %f %f\n", src_demean[i][0], src_demean[i][1], dst_demean[i][0], dst_demean[i][1]);
+        STUDY_DBG("%f %f %f %f\n", src_demean[i][0], src_demean[i][1], dst_demean[i][0], dst_demean[i][1]);
     }
 
     double A[SRC_DIM][SRC_DIM] = {0.0};
@@ -58,30 +58,35 @@ double *_umeyama(double *src, double *dst, double estimate_scale)
                 A[i][k] += dst_demean[j][i]*src_demean[j][k];
             }
             A[i][k] /= SRC_NUM;
-            printf("A[%d][%d] = %f \n", i, k, A[i][k]);
+            STUDY_DBG("A[%d][%d] = %f \n", i, k, A[i][k]);
         }
     }
 
     double d[SRC_DIM] = {1, 1};
     double det_A = A[0][0]*A[1][1] - A[1][0]*A[1][0];
-    printf("%f \n", det_A);
+    STUDY_DBG("%f \n", det_A);
     if(det_A < 0)
         d[SRC_DIM-1] = -1;
 
-    double T[SRC_DIM+1][SRC_DIM+1] =
-    {
-        {1, 0, 0},
-        {0, 1, 0},
-        {0, 0, 1}
-    };
+    double *TT = (double *)malloc((SRC_DIM+1)*(SRC_DIM+1)*sizeof(double));
+    double (*T)[SRC_DIM+1] = TT;
+    T[0][0] = 1;
+    T[0][1] = 0;
+    T[0][2] = 0;
+    T[1][0] = 0;
+    T[1][1] = 1;
+    T[1][2] = 0;
+    T[2][0] = 0;
+    T[2][1] = 0;
+    T[2][2] = 1;
 
     double U[SRC_DIM][SRC_DIM] = {0};
     double S[SRC_DIM] = {0};
     double V[SRC_DIM][SRC_DIM] = {0};
     svd22(&A[0][0], &U[0][0], S, &V[0][0]);
-    printf("S[0] = %f S[1] = %f\n", S[0], S[1]);
-    printf("U[0][0] = %f U[0][1] = %f U[1][0] = %f U[1][1] = %f\n", U[0][0], U[0][1], U[1][0], U[1][1]);
-    printf("V[0][0] = %f V[0][1] = %f V[1][0] = %f V[1][1] = %f\n", V[0][0], V[0][1], V[1][0], V[1][1]);
+    STUDY_DBG("S[0] = %f S[1] = %f\n", S[0], S[1]);
+    STUDY_DBG("U[0][0] = %f U[0][1] = %f U[1][0] = %f U[1][1] = %f\n", U[0][0], U[0][1], U[1][0], U[1][1]);
+    STUDY_DBG("V[0][0] = %f V[0][1] = %f V[1][0] = %f V[1][1] = %f\n", V[0][0], V[0][1], V[1][0], V[1][1]);
 
     double diag_d[SRC_DIM][SRC_DIM] = 
         {
@@ -92,7 +97,7 @@ double *_umeyama(double *src, double *dst, double estimate_scale)
     T[0][1] = U[0][0]*V[0][1] + U[0][1]*V[1][1];
     T[1][0] = U[1][0]*V[0][0] + U[1][1]*V[1][0];
     T[1][1] = U[1][0]*V[0][1] + U[1][1]*V[1][1];
-    printf("T[0][0] = %f T[0][1] = %f T[1][0] = %f T[1][1] = %f \n", T[0][0], T[0][1], T[1][0], T[1][1]);
+    STUDY_DBG("T[0][0] = %f T[0][1] = %f T[1][0] = %f T[1][1] = %f \n", T[0][0], T[0][1], T[1][0], T[1][1]);
 
     double scale = 1.0;
     double src_demean_mean[SRC_DIM] = {0.0};
@@ -112,9 +117,9 @@ double *_umeyama(double *src, double *dst, double estimate_scale)
     }
     src_demean_var[0] /= (SRC_NUM);
     src_demean_var[1] /= (SRC_NUM);
-    printf("%f %f\n", src_demean_var[0], src_demean_var[1]);
+    STUDY_DBG("%f %f\n", src_demean_var[0], src_demean_var[1]);
     scale = 1.0 / (src_demean_var[0] + src_demean_var[1]) *(S[0] + S[1]);
-    printf("scale = %f\n", scale);
+    STUDY_DBG("scale = %f\n", scale);
     T[0][2] = dst_mean[0] - scale*(T[0][0]*src_mean[0] + T[0][1]*src_mean[1]);
     T[1][2] = dst_mean[1] - scale*(T[1][0]*src_mean[0] + T[1][1]*src_mean[1]);
     T[0][0] *= scale;
@@ -124,11 +129,83 @@ double *_umeyama(double *src, double *dst, double estimate_scale)
     for(i=0; i<3; i++)
     {
         for(j=0; j<3; j++)
-            printf("T[%d][%d] = %f ", i, j, T[i][j]);
-        printf("\n");
+            STUDY_DBG("T[%d][%d] = %f ", i, j, T[i][j]);
+        STUDY_DBG("\n");
     }
+    return TT;
 }
 
+ZqImage *study_similarity(ZqImage* bmpImg, double *T)
+{
+    //相似变换
+    ZqImage* bmpImgSim;
+    int width = 0;
+    int height = 0;
+    int step = 0;
+    int sim_step = 0;
+    int channels = 1;
+    int i, j, k;
+    width = bmpImg->width;
+    height = bmpImg->height;
+    channels = bmpImg->channels;
+
+    //初始化处理后图片的信息
+    bmpImgSim = (ZqImage*)malloc(sizeof(ZqImage));
+    bmpImgSim->channels = channels;
+    bmpImgSim->width = 128;
+    bmpImgSim->height = 128;
+
+    step = channels * width;
+    sim_step = bmpImgSim->channels * bmpImgSim->width;
+    bmpImgSim->imageData =
+        (unsigned char*)malloc(sizeof(unsigned char)*bmpImgSim->width*bmpImgSim->height*bmpImgSim->channels);
+
+    //初始化图像
+    for (i=0; i<bmpImgSim->height; i++)
+    {
+        for (j=0; j<bmpImgSim->width; j++)
+        {
+            for (k = 0; k < channels; k++)
+            {
+                bmpImgSim->imageData[(bmpImgSim->height-1-i)*sim_step + j*bmpImgSim->channels + k] = 0;
+            }
+        }
+    }
+
+    int pre_x, pre_y, after_x, after_y;//缩放前对应的像素点坐标
+    int x, y;
+    unsigned short color[2][2];
+    double (*TT)[3] = T;
+    for(i = 0;i < bmpImgSim->height;i++)
+    {
+        for(j = 0;j < bmpImgSim->width;j++)
+        {
+            pre_x = (int)(TT[0][0] * j + TT[0][1] * i + TT[0][2]);
+            pre_y = (int)(TT[1][0] * j + TT[1][1] * i + TT[1][2]);
+
+            pre_x <<= 8;
+            pre_y <<= 8;
+            y = pre_y & 0xFF;
+            x = pre_x & 0xFF;
+            pre_x >>= 8;
+            pre_y >>= 8;
+            if(pre_x<0 || pre_x > (width-1) || pre_y<0 || pre_y>(height-1))
+				    continue;
+            for(k=0; k<channels; k++)
+            {
+                color[0][0] = bmpImg->imageData[pre_y*step + pre_x * channels + k];
+                color[1][0] = bmpImg->imageData[pre_y*step + (pre_x + 1) * channels + k];
+                color[0][1] = bmpImg->imageData[(pre_y + 1)*step + pre_x * channels + k];
+                color[1][1] = bmpImg->imageData[(pre_y + 1)*step + (pre_x + 1) * channels + k];
+                int final = (0x100 - x)*(0x100 - y)*color[0][0] + x * (0x100 - y)*color[1][0] + (0x100 - x)*y*color[0][1] + x * y*color[1][1];
+                final = final >> 16;
+                //bmpImgSim->imageData[i * sim_step + j*channels +k] = final;
+                bmpImgSim->imageData[i * sim_step + j*channels +k] = bmpImg->imageData[pre_y*step + pre_x*channels + k];
+            }
+        }
+    }
+    return bmpImgSim;
+}
 
 ZqImage *imshear(ZqImage *img, int angle, char axis)
 {
