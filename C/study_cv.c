@@ -1,6 +1,11 @@
 ﻿#include "study_cv.h"
 #include <stdlib.h>
 
+void matrix_rank(const double *M)
+{
+    
+}
+
 void svd22(const double a[4], double u[4], double s[2], double v[4]) {
     s[0] = (sqrt(pow(a[0] - a[3], 2) + pow(a[1] + a[2], 2)) + sqrt(pow(a[0] + a[3], 2) + pow(a[1] - a[2], 2))) / 2;
     s[1] = fabs(s[0] - sqrt(pow(a[0] - a[3], 2) + pow(a[1] + a[2], 2)));
