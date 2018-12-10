@@ -6,7 +6,7 @@ int main(int argc, char* argv[])
 {
 #define PIC_SIZE 128
 #define MARGIN_SIZE 0
-    ZqImage* img = imread("../lena/viewfile.bmp");//读取原始图像(灰度或彩色)
+    ZqImage* img = imread("../lena/lena.bmp");//读取原始图像(灰度或彩色)
     ZqImage* img_2ch = study_3ch_to_2ch(img);
     free(img);
     img = study_2ch_to_3ch(img_2ch);

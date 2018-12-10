@@ -1,4 +1,6 @@
 #include<stdio.h>
+#include<stdbool.h>
+#include<float.h>
 
 #define MAX 10  //最大行(列)数
 typedef struct
@@ -21,10 +23,10 @@ double A[4][5] =
     {1, -1, -6, -1, 2}
 };
 
-int B[4][3] =
+double B[2][2] =
 {
-    {4, -2},
-    {1, 2},
+    {0, -0.0001},
+    {1, 0},
 
 };
 void main()
@@ -40,7 +42,15 @@ void main()
     output_matrix(b);
     printf("\nr(A)=%d\n",r);
 }
-
+bool double_is_zero(double d)
+{
+    if (d >= -DBL_EPSILON && d <= DBL_EPSILON)
+    {
+        return true;
+    }
+    return false;
+}
+ 
 void input_matrix(matrix *dat)   //输入矩阵
 {
     int i, j;
@@ -104,7 +114,7 @@ int rank_matrix(matrix dat,matrix *res) //求秩(返回值为秩，第2个参数为变换得到的
         f_z=1;
         for(i=ri; i<m; i++)
         {
-            if(dat.a[i][ci] != 0)
+            if(!double_is_zero(dat.a[i][ci]))
             {
                 if(i != ri)
                 {

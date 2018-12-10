@@ -1,10 +1,79 @@
 ﻿#include "study_cv.h"
 #include <stdlib.h>
+#include<stdbool.h>
+#include<float.h>
 
-void matrix_rank(const double *M)
+bool double_is_zero(double d)
 {
-    
+    if (d >= -DBL_EPSILON && d <= DBL_EPSILON)
+    {
+        return true;
+    }
+    return false;
 }
+
+void exchang_row(double *a,double *b,int n)
+{
+    int i;
+    double t;
+    for(i=0;i<n;i++)
+    {
+        t=a[i];
+        a[i]=b[i];
+        b[i]=t;
+    }
+}
+
+void mul_row(double *a,double k,int n)
+{
+    int i;
+    for(i=0;i<n;i++)
+        a[i] *= k;
+}
+void add_row(double *a1,double *a2,double k,int n)
+{
+    int i;
+    for(i=0; i<n; i++)
+        a1[i] += a2[i]*k;
+}
+
+int rank_matrix(double *data) //求秩(返回值为秩)
+{
+    int i;
+    double t;
+    int ri,ci;  //行标记与列标记
+    int f_z;    //某列是否全为0的标志，为1表示全为0
+    double (*dat)[2] = data;
+    ri = 0;
+    for(ci=0; ci<2; ci++)
+    {
+        f_z=1;
+        for(i=ri; i<2; i++)
+        {
+            if(!double_is_zero(dat[i][ci]))
+            {
+                if(i != ri)
+                {
+                    if(f_z)
+                    {
+                        exchang_row(&(dat[ri][ci]),&(dat[i][ci]),2-ci);
+                    }
+                    else
+                    {
+                        t=dat[i][ci];
+                        mul_row(&(dat[i][ci]),dat[ri][ci],2-ci);
+                        add_row(&(dat[i][ci]), &(dat[ri][ci]), -t, 2-ci);
+                    }
+                }
+                f_z=0;
+            }
+        }
+        if(!f_z)
+            ri++; 
+    }
+    return ri; 
+}
+
 
 void svd22(const double a[4], double u[4], double s[2], double v[4]) {
     s[0] = (sqrt(pow(a[0] - a[3], 2) + pow(a[1] + a[2], 2)) + sqrt(pow(a[0] + a[3], 2) + pow(a[1] - a[2], 2))) / 2;
@@ -93,15 +162,48 @@ double *study_umeyama(double *src, double *dst)
     STUDY_DBG("U[0][0] = %f U[0][1] = %f U[1][0] = %f U[1][1] = %f\n", U[0][0], U[0][1], U[1][0], U[1][1]);
     STUDY_DBG("V[0][0] = %f V[0][1] = %f V[1][0] = %f V[1][1] = %f\n", V[0][0], V[0][1], V[1][0], V[1][1]);
 
-    double diag_d[SRC_DIM][SRC_DIM] = 
+    int rank = rank_matrix(&A[0][0]);
+    STUDY_DBG("rank = %d \n", rank);
+
+    if (rank == 0)
+    {
+        return TT;
+    }
+    else if(rank == 1)
+    {
+        double det_U = U[0][0]*U[1][1] - U[0][1]*U[1][0];
+        double det_T = T[0][0]*T[1][1] - T[0][1]*T[1][0];
+        if(det_U * det_T > 0)
+        {
+            T[0][0] = U[0][0]*V[0][0] + U[0][1]*V[1][0];
+            T[0][1] = U[0][0]*V[0][1] + U[0][1]*V[1][1];
+            T[1][0] = U[1][0]*V[0][0] + U[1][1]*V[1][0];
+            T[1][1] = U[1][0]*V[0][1] + U[1][1]*V[1][1];
+        }
+        else
+        {
+            double s = d[1];
+            d[1] = -1;
+            T[0][0] = U[0][0]*V[0][0] - U[0][1]*V[1][0];
+            T[0][1] = U[0][0]*V[0][1] - U[0][1]*V[1][1];
+            T[1][0] = U[1][0]*V[0][0] - U[1][1]*V[1][0];
+            T[1][1] = U[1][0]*V[0][1] - U[1][1]*V[1][1];
+            d[1] = s;
+        }
+    }
+    else
+    {
+        double diag_d[SRC_DIM][SRC_DIM] = 
         {
             {1.0, 0.0},
             {0.0, 1.0}
         };
-    T[0][0] = U[0][0]*V[0][0] + U[0][1]*V[1][0];
-    T[0][1] = U[0][0]*V[0][1] + U[0][1]*V[1][1];
-    T[1][0] = U[1][0]*V[0][0] + U[1][1]*V[1][0];
-    T[1][1] = U[1][0]*V[0][1] + U[1][1]*V[1][1];
+        T[0][0] = U[0][0]*V[0][0] + U[0][1]*V[1][0];
+        T[0][1] = U[0][0]*V[0][1] + U[0][1]*V[1][1];
+        T[1][0] = U[1][0]*V[0][0] + U[1][1]*V[1][0];
+        T[1][1] = U[1][0]*V[0][1] + U[1][1]*V[1][1];
+    }
+
     STUDY_DBG("T[0][0] = %f T[0][1] = %f T[1][0] = %f T[1][1] = %f \n", T[0][0], T[0][1], T[1][0], T[1][1]);
 
     double scale = 1.0;
